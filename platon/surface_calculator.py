@@ -20,9 +20,9 @@ class SurfaceCalculator:
     def __init__(self,T_star, R_star, a, R_planet, surface_type, stellar_blackbody = True, path_to_own_stellar_spectrum = None):
         self.stellar_blackbody = stellar_blackbody
         self.T_star = T_star * u.K
-        self.R_star = R_star * u.m # * R_sun #ExoMAST
-        self.a = a * u.m # AU; ExoMAST
-        self.R_planet = R_planet * u.m# * R_jup #m
+        self.R_star = R_star * u.m # 
+        self.a = a * u.m # AU; 
+        self.R_planet = R_planet * u.m# 
         self.A_bond_conversion = (3/2)
         
         self.geoa = pd.read_csv('../data_kim/new_GeoA.csv', sep = '\t')
@@ -133,8 +133,7 @@ class SurfaceCalculator:
         
         return total_flux, depths    
     
-    def calc_surface_fluxes(self, skip_temp_calc = True,
-                            plot_stellar_spectum = False, plot_surface_spectra = False, save_stellar_spectrum = False):
+    def calc_surface_fluxes(self, skip_temp_calc = True):
         if self.path_to_own_stellar_spectrum is None:
             atm = AtmosphereSolver(include_condensation=True, method="xsec")
             
@@ -144,7 +143,7 @@ class SurfaceCalculator:
             stellar_flux = stellar_flux.to(u.W/u.m**3).value
             
         
-        ########################### NON BLACKBODY STELLAR SPECTRA ###########################
+        ########################### SELF-DEFINED STELLAR SPECTRA IN PHOTONS/S/M**2 ###########################
         #################################################################################################
         
         if self.path_to_own_stellar_spectrum is not None:
@@ -162,10 +161,6 @@ class SurfaceCalculator:
                 self.calc_new_albedo_and_emi()
             
             stellar_flux = np.interp(self.wavelengths, wl, stellar_flux)
-                
-            # if self.path_to_own_stellar_spectrum is None:
-            #     atm = AtmosphereSolver(include_condensation=True, method="xsec")
-            #     stellar_spec = atm.get_stellar_spectrum(atm.lambda_grid, T_star = self.T_star, T_spot = None, spot_cov_frac = None, blackbody = False)
 
         def calc_temps(x, redist_factor):
             Ag = np.mean(self.surface_geoa_og)
@@ -194,17 +189,6 @@ class SurfaceCalculator:
         
         self.surface_model['Wavelength'] = self.wavelengths
        
-
-        if plot_surface_spectra:
-            model_surface_spectra_table = ascii.read('/Users/kimparagas/desktop/jwst_project/code/current/products/model_fluxes_platon_stellar_bb.csv')
-            for i in np.arange(len(self.geoa_columns[1:])):
-                plt.plot(model_surface_spectra_table['Wavelength']*1e6, model_surface_spectra_table[self.surface_type], 'k')
-                plt.plot(self.model_fluxes['Wavelength'] * 1e6, total_fluxes[i], 'r--')
-                plt.xlabel(r'wavelength [$\mu$m]')
-                plt.ylabel('fluxes [si]')
-                plt.title(self.surface_type)
-                plt.show()
-                plt.close()
                 
     def read_in_temp(self, temp):
         self.temperature = temp

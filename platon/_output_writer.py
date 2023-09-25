@@ -2,8 +2,6 @@ import numpy as np
 from sys import stdout
 import os, glob
 
-from ._convert_clr_to_vmr import convert_clr_to_vmr
-
 def write_param_estimates_file(samples, best_params, best_lnprob, fit_labels,
                                filename="BestFit.txt"):
     output = "#Parameter Lower_error Median Upper_error Best_fit\n"

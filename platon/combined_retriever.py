@@ -25,7 +25,10 @@ from ._output_writer import write_param_estimates_file
 from .TP_profile import Profile
 from .retrieval_result import RetrievalResult
 from .custom_dynesty_result import CustomDynestyResult
-from ._convert_clr_to_vmr import convert_clr_to_vmr
+
+T0s = {'Metal-rich': 1006.5, 'Ultramafic': 985.6, 'Feldspathic': 895.4,
+        'Basaltic': 997.4, 'Granitoid': 876.8, 'Clay': 863.7, 'Ice-rich silicate': 968.0,
+        'Fe-oxidized': 1000.4, 'blackbody': 977.11} 
 
 class CombinedRetriever:
     def pretty_print(self, fit_info):
@@ -100,6 +103,18 @@ class CombinedRetriever:
                     fit_info._get("CO_ratio"),
                     10**fit_info._get("log_cloudtop_P"))
 
+    def _convert_clr_to_vmr(self, clrs):
+        clr_bkg = - np.sum(clrs)
+        clrs_with_bkg = np.append(clrs, clr_bkg)
+        geometric_mean = 1 / np.sum(np.exp(clrs_with_bkg))
+        # vmrs = np.exp(clrs + np.log(geometric_mean))
+        vmrs_with_bkg = np.exp(clrs_with_bkg + np.log(geometric_mean))
+        if np.around(np.sum(vmrs_with_bkg), decimals = 5) == 1.0:
+            return vmrs_with_bkg
+        else:
+            print(np.around(np.sum(vmrs_with_bkg), decimals = 5))
+            raise ValueError(
+                'VMRs did not sum to unity. Something is wrong.')
 
     def _ln_like(self, params, transit_calc, eclipse_calc, fit_info, measured_transit_depths,
                  measured_transit_errors, measured_eclipse_depths,
@@ -128,6 +143,10 @@ class CombinedRetriever:
         part_size = 10.0**params_dict["log_part_size"]
         P_quench = 10 ** params_dict["log_P_quench"]
         stellar_blackbody = params_dict['stellar_blackbody']
+        if stellar_blackbody == False:
+            path_to_own_stellar_spectrum = params_dict['path_to_own_stellar_spectrum']
+        if stellar_blackbody == True:
+            path_to_own_stellar_spectrum = None
         custom_abundances = params_dict['custom_abundances']
         
         surface = params_dict['surface']
@@ -137,6 +156,7 @@ class CombinedRetriever:
             
         if surface is None:
             surface_P = None
+        
         
         surface_T = params_dict['T_surf']
 
@@ -152,7 +172,7 @@ class CombinedRetriever:
             clrs = []
             for gas in gases[:-1]: 
                 clrs += [params_dict[f'clr_{gas}']]
-            vmrs = convert_clr_to_vmr(np.array(clrs))
+            vmrs = self._convert_clr_to_vmr(np.array(clrs))
             
         if params_dict['use_clr'] == False:
             vmrs = None
@@ -222,6 +242,31 @@ class CombinedRetriever:
         except AtmosphereError as e:
             print(e)
             return -np.inf
+        
+        # if params_dict["profile_type"] == "parametric":
+        #     P0 = 1e-3
+        #     P1 = 10**params_dict["log_P1"]
+        #     # P3 = 10**params_dict['log_P3']
+        #     T3 = params_dict['T3']
+        #     if surface_P is not None:
+        #         P3 = 10**params_dict["log_surface_P"]
+        #     elif cloudtop_P is not None:
+        #         P3 = 10**params_dict["log_cloudtop_P"]
+        #     # T3 = 914.368504
+
+        #     ln_P2 = params_dict["alpha2"]**2*(params_dict["T0"]+np.log(P1/P0)**2/params_dict["alpha1"]**2 - T3) - np.log(P1)**2 + np.log(P3)**2
+        #     ln_P2 /= 2 * np.log(P3/P1)
+        #     P2 = np.exp(ln_P2)
+        #     T2 = T3 - np.log(P3/P2)**2/params_dict["alpha2"]**2
+        #     # if params_dict["T0"] > T2:
+        #     #     return -np.inf
+        #     # P_surf = 10**params_dict['log_surface_P']
+
+        #     if P1 > P3: 
+        #         return -np.inf
+            
+            # if P3 > P_surf: 
+            #     return -np.inf
         
         self.last_params = params
         self.last_lnprob = fit_info._ln_prior(params) + ln_likelihood

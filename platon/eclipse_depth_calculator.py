@@ -93,6 +93,8 @@ class EclipseDepthCalculator:
             cond = np.logical_and(
                 intermediate_lambdas >= start,
                 intermediate_lambdas < end)
+            # print(intermediate_lambdas[cond])
+            # sys.exit()
             binned_wavelengths.append(np.mean(intermediate_lambdas[cond]))
             binned_depth = np.average(intermediate_depths[cond],
                                       weights=intermediate_stellar_spectrum[cond])
@@ -104,6 +106,8 @@ class EclipseDepthCalculator:
                                         weights=intermediate_stellar_spectrum[cond])
                 binned_atm_depths.append(binned_atm_depth)
                 binned_surface_depths.append(binned_surface_depth)
+        # print(binned_wavelengths)
+        # sys.exit()
         if atmosphere_depths is not None:    
             return intermediate_lambdas, intermediate_depths, np.array(binned_wavelengths), np.array(binned_depths), np.array(binned_atm_depths), np.array(binned_surface_depths)
         else: 
@@ -183,6 +187,7 @@ class EclipseDepthCalculator:
         padded_taus[:, 1:] = taus
         integrand = planck_function * np.diff(scipy.special.expn(3, padded_taus), axis=1)
         fluxes = -2 * np.pi * np.sum(integrand, axis=1)
+        # fluxes = 0
         if not np.isinf(cloudtop_pressure) and surface is None:
             max_taus = np.max(taus, axis=1)
             fluxes_from_cloud = -np.pi * planck_function[:, -1] * (max_taus**2 * scipy.special.expi(-max_taus) + max_taus * np.exp(-max_taus) - np.exp(-max_taus))

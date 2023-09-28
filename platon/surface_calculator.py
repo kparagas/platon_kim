@@ -25,7 +25,7 @@ class SurfaceCalculator:
         self.R_planet = R_planet * u.m# * R_jup #m
         self.A_bond_conversion = (3/2)
         
-        self.geoa = pd.read_csv('/Users/kimparagas/Desktop/jwst_project/new_GeoA.csv', sep = '\t')
+        self.geoa = pd.read_csv('../data_kim/new_GeoA.csv', sep = '\t')
         
         self.wavelengths = self.geoa['Wavelength'].to_numpy()
         
@@ -41,11 +41,11 @@ class SurfaceCalculator:
         self.surface_geoa = self.geoa[self.surface_type]
         self.surface_emi = 1 - self.surface_geoa
         
-        self.crust_emission_flux = ascii.read('/Users/kimparagas/Desktop/jwst_project/code/from_renyu/Crust_EmissionFlux.dat', delimiter = '\t')
+        self.crust_emission_flux = ascii.read('../data_kim/Crust_EmissionFlux.dat', delimiter = '\t')
         
         Teq = (1/4)**(1/4) * self.T_star * np.sqrt(self.R_star / self.a)
         Teq = Teq.si.value
-        f_poly_coeffs = pd.read_csv('/Users/kimparagas/Desktop/f_results/f_poly_coeffs.csv', sep = '\t', index_col = 0)
+        f_poly_coeffs = pd.read_csv('../data_kim/f_poly_coeffs.csv', sep = '\t', index_col = 0)
         poly_models = []
         coeffs = f_poly_coeffs.loc[self.surface_type]
         for i, (c, name) in enumerate(zip(coeffs, coeffs.keys())):
@@ -138,10 +138,12 @@ class SurfaceCalculator:
         if self.path_to_own_stellar_spectrum is None:
             atm = AtmosphereSolver(include_condensation=True, method="xsec")
             
-            stellar_photon_flux, _ = atm.get_stellar_spectrum(self.wavelengths, T_star = self.T_star.si.value, T_spot = None, spot_cov_frac = None, blackbody = self.stellar_blackbody) * u.photon / u.s / u.m**2
-            wavelengths = self.wavelengths * u.m
+            stellar_photon_flux, _ = atm.get_stellar_spectrum(atm.lambda_grid, T_star = self.T_star.si.value, T_spot = None, spot_cov_frac = None, blackbody = self.stellar_blackbody) * u.photon / u.s / u.m**2
+            wavelengths = atm.lambda_grid * u.m
             stellar_flux = ((stellar_photon_flux / (u.photon * np.gradient(wavelengths))) * ((const.c * const.h) / (wavelengths))).to(u.W/u.m**2/u.um)
             stellar_flux = stellar_flux.to(u.W/u.m**3).value
+            
+            stellar_flux = np.interp(self.wavelengths, wavelengths.si.value, stellar_flux)
             
         
         ########################### NON BLACKBODY STELLAR SPECTRA ###########################
